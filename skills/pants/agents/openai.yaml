@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pants"
+  short_description: "Work effectively in Pants repos"
+  default_prompt: "Use $pants to orient in this Pants repository and choose focused verification commands."
