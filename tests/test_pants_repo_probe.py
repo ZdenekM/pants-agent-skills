@@ -50,6 +50,17 @@ def write_fake_pants_runner(buildroot: Path) -> str:
     return "./pants"
 
 
+def write_failing_pants_runner(buildroot: Path) -> None:
+    if os.name == "nt":
+        runner = buildroot / "pants.bat"
+        runner.write_text("@echo off\r\nexit /b 64\r\n", encoding="utf-8")
+        return
+
+    runner = buildroot / "pants"
+    runner.write_text(f"#!{sys.executable}\nraise SystemExit(64)\n", encoding="utf-8")
+    runner.chmod(runner.stat().st_mode | stat.S_IXUSR)
+
+
 class PantsRepoProbeTest(unittest.TestCase):
     def test_probe_discovers_buildroot_and_uses_local_runner(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -77,6 +88,60 @@ class PantsRepoProbeTest(unittest.TestCase):
                 {"python-default": "3rdparty/python/default.lock"},
             )
             self.assertEqual(payload["warnings"], [])
+
+    def test_files_only_skips_pants_commands_but_parses_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            buildroot = Path(tmp) / "repo"
+            shutil.copytree(FIXTURE, buildroot)
+            write_failing_pants_runner(buildroot)
+
+            completed = subprocess.run(
+                [sys.executable, str(PROBE), "--cwd", str(buildroot), "--files-only"],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["pants_version"], "2.31.0")
+            self.assertEqual(payload["source_roots"], ["src", "tests"])
+            self.assertIn("pants.backend.python", payload["backends"])
+            self.assertEqual(payload["warnings"], [])
+
+    def test_files_only_does_not_require_pants_on_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            buildroot = Path(tmp) / "repo"
+            shutil.copytree(FIXTURE, buildroot)
+            env = os.environ.copy()
+            env["PATH"] = str(buildroot / "missing-bin")
+
+            completed = subprocess.run(
+                [sys.executable, str(PROBE), "--cwd", str(buildroot), "--files-only"],
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["pants_version"], "2.31.0")
+            self.assertEqual(payload["source_roots"], ["src", "tests"])
+            self.assertEqual(payload["runner"], "pants")
+            self.assertEqual(payload["warnings"], [])
+
+    def test_legacy_skip_pants_commands_flag_is_not_supported(self) -> None:
+        completed = subprocess.run(
+            [sys.executable, str(PROBE), "--skip-pants-commands"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn("unrecognized arguments: --skip-pants-commands", completed.stderr)
 
     def test_probe_reports_missing_buildroot_as_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

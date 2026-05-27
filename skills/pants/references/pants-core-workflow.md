@@ -13,6 +13,9 @@ Portable first step:
 python <skill-dir>/scripts/pants_repo_probe.py --pretty
 ```
 
+Use `--files-only` when Pants commands should not run; it still parses local
+configuration but skips `pants --version` and `pants roots`.
+
 If the probe is unavailable, these POSIX shell examples are useful first
 commands:
 
@@ -46,6 +49,13 @@ Key config areas:
 - `[python] enable_resolves`, `default_resolve`, `resolves`
 - codegen/tool subsystems such as `[python-protobuf]`, `[protoc]`, or `[buf]`
 - CI-only config such as `pants.ci.toml` or `PANTS_CONFIG_FILES`
+
+For Pants version audits, prefer the active runner (`pants --version` or the
+repo-local wrapper), `pants.toml`, and upstream Pants sources listed in
+`references/sources.md`. Do not treat `python -m pip index versions
+pantsbuild.pants` as authoritative for a Pants 2 runner selection. After changing
+`[GLOBAL] pants_version` in a repo without an executable wrapper, run
+`pants --version` to prove the PATH runner can bootstrap the configured version.
 
 ## BUILD Files And Targets
 

@@ -17,13 +17,13 @@ Use this skill for the Pants build system. Always rediscover the active build ro
 
 ## Probe The Repo
 
-Run the bundled read-only probe when orientation matters:
+Run the bundled tracked-file-safe probe when orientation matters:
 
 ```bash
 python <skill-dir>/scripts/pants_repo_probe.py --pretty
 ```
 
-Use the script path from the loaded or installed skill bundle, not from the target Pants repository. The probe prints JSON and does not modify the repository.
+Use the script path from the loaded or installed skill bundle, not from the target Pants repository. The probe prints JSON and does not edit tracked project files, but its default `pants --version` and `pants roots` calls may create local cache or daemon state. Use `--files-only` when Pants commands should not run. If the repo requires serialized Pants work or another Pants command is active, wait, reuse the active run, or start with `--files-only`.
 
 ## Core Commands
 
@@ -52,7 +52,7 @@ For difficult failures, add `--print-stacktrace -ldebug` and use `--keep-sandbox
 
 ## Parallel Workspaces
 
-Treat every editor window, terminal, agent session, or workspace as a separate Pants project. Re-probe `cwd`, build root, runner, version, source roots, resolves, and target addresses. Do not update global Pants config or delete global caches unless explicitly requested. Use unique temp files and avoid cross-project assumptions. When a repo says Pants is heavyweight or lock-prone, serialize Pants commands in that repo.
+Treat every editor window, terminal, agent session, or workspace as a separate Pants project. Re-probe `cwd`, build root, runner, version, source roots, resolves, and target addresses. Do not update global Pants config or delete global caches unless explicitly requested. Use unique temp files and avoid cross-project assumptions. When a repo says Pants is heavyweight or lock-prone, serialize all Pants commands in that repo, including read-only discovery.
 
 ## References
 

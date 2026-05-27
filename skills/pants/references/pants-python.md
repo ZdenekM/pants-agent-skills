@@ -15,6 +15,11 @@ Prefer target generators where they match the repo's existing style. After
 adding files, use `pants tailor <path>` or `pants update-build-files <path>`
 when BUILD metadata may need regeneration.
 
+When adding the first tests in a tree, prove Pants owns them before relying on
+`pants test <test-spec>`. Create or generate the matching `python_tests` target
+and verify ownership with `pants list <test-spec>` or the narrowest relevant
+spec; use `tests::` only when that is the repo's actual test tree.
+
 ## Third-Party Dependencies
 
 Do not rely on an activated virtualenv as the source of truth. Inspect the repo
@@ -53,6 +58,11 @@ pants generate-lockfiles --resolve=<resolve-name>
 
 Regenerate all lockfiles only when the repo contract requires it or the change
 really crosses resolve boundaries.
+
+After lockfile generation, inspect `git diff --numstat` and named
+package/version changes. If unrelated transitive versions drift, explicitly
+accept that broader refresh or narrow the lockfile change using the repo's
+approved workflow.
 
 ## Tool Lockfiles
 

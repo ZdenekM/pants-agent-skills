@@ -39,8 +39,10 @@ Avoid fixed shared names such as `/tmp/pants-specs.txt`.
 
 Some repos tolerate concurrent Pants work; others explicitly treat Pants as a
 heavyweight or lock-prone resource. If a repo says to serialize Pants commands,
-do that. If multiple heavy jobs are already running, prefer polling/reusing the
-active run, focused specs, or waiting over starting duplicate broad checks.
+do that for read-only discovery as well as modifying or verification goals.
+This includes `pants roots`, `pants list`, and bundled probes that invoke Pants.
+If multiple heavy jobs are already running, prefer polling/reusing the active
+run, focused specs, or waiting over starting duplicate broad checks.
 
 ## Reporting
 

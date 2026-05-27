@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Read-only Pants repository probe.
+"""Tracked-file-safe Pants repository probe.
 
 The script discovers the nearest Pants build root and prints a small JSON
-summary for agents. It does not modify the repository.
+summary for agents. It does not edit tracked project files; Pants commands run
+by default may still create local cache or daemon state.
 """
 
 from __future__ import annotations
@@ -110,7 +111,7 @@ def local_runner_candidates(buildroot: Path) -> list[Path]:
     return [buildroot / name for name in names]
 
 
-def choose_runner(buildroot: Path) -> tuple[str, list[str]]:
+def choose_runner(buildroot: Path, warn_if_unavailable: bool = True) -> tuple[str, list[str]]:
     warnings: list[str] = []
     non_executable_candidates: list[str] = []
     for local_runner in local_runner_candidates(buildroot):
@@ -119,12 +120,12 @@ def choose_runner(buildroot: Path) -> tuple[str, list[str]]:
         if os.name == "nt" or os.access(local_runner, os.X_OK):
             return f"./{local_runner.name}", warnings
         non_executable_candidates.append(local_runner.name)
-    if non_executable_candidates:
+    if non_executable_candidates and warn_if_unavailable:
         warnings.append(
             "Local Pants runner files exist but are not executable; using pants from PATH: "
             + ", ".join(non_executable_candidates)
         )
-    if shutil.which("pants") is None:
+    if warn_if_unavailable and shutil.which("pants") is None:
         warnings.append("No executable ./pants wrapper and no pants executable found on PATH.")
     return "pants", warnings
 
@@ -158,7 +159,7 @@ def run_pants(
     return completed.stdout.strip(), None
 
 
-def probe(cwd: Path, timeout: float, skip_pants_commands: bool) -> tuple[dict[str, Any], int]:
+def probe(cwd: Path, timeout: float, files_only: bool) -> tuple[dict[str, Any], int]:
     warnings: list[str] = []
     buildroot = find_buildroot(cwd)
     if buildroot is None:
@@ -186,12 +187,12 @@ def probe(cwd: Path, timeout: float, skip_pants_commands: bool) -> tuple[dict[st
     config_files = [name for name in CONFIG_CANDIDATES if (buildroot / name).exists()]
     config = load_toml(buildroot / "pants.toml", warnings)
     extracted = extract_config(config)
-    runner, runner_warnings = choose_runner(buildroot)
+    runner, runner_warnings = choose_runner(buildroot, warn_if_unavailable=not files_only)
     warnings.extend(runner_warnings)
 
     pants_version = None
     roots_output = None
-    if not skip_pants_commands:
+    if not files_only:
         pants_version, warning = run_pants(buildroot, runner, ["--version"], timeout)
         if warning:
             warnings.append(warning)
@@ -222,11 +223,11 @@ def probe(cwd: Path, timeout: float, skip_pants_commands: bool) -> tuple[dict[st
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Read-only Pants repository probe.")
+    parser = argparse.ArgumentParser(description="Tracked-file-safe Pants repository probe.")
     parser.add_argument("--cwd", type=Path, default=Path.cwd(), help="Directory to probe from.")
     parser.add_argument("--timeout", type=float, default=20.0, help="Timeout for each Pants command in seconds.")
     parser.add_argument(
-        "--skip-pants-commands",
+        "--files-only",
         action="store_true",
         help="Only parse files; do not run pants --version or pants roots.",
     )
@@ -236,7 +237,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    result, exit_code = probe(args.cwd, args.timeout, args.skip_pants_commands)
+    result, exit_code = probe(args.cwd, args.timeout, args.files_only)
     indent = 2 if args.pretty else None
     print(json.dumps(result, indent=indent, sort_keys=True))
     return exit_code

@@ -13,7 +13,7 @@ The portable artifact is the `skills/pants/` directory:
 
 - `SKILL.md` contains the trigger metadata and short operational workflow.
 - `references/` contains longer Pants guidance loaded only when needed.
-- `scripts/` contains deterministic helpers such as the read-only repo probe.
+- `scripts/` contains deterministic helpers such as the tracked-file-safe repo probe.
 - `agents/openai.yaml` is an optional OpenAI/Codex adapter. Other agents can ignore it.
 
 For an agent that does not implement this exact skill format, use
@@ -64,10 +64,11 @@ python scripts/install_skill.py --dry-run
 python scripts/install_skill.py --runtime codex --dry-run
 ```
 
-`skills/pants/scripts/pants_repo_probe.py` is read-only. It discovers the nearest
-`pants.toml`, selects `./pants` when an executable wrapper exists, parses core
-configuration, and runs only lightweight Pants commands unless `--skip-pants-commands`
-is used.
+`skills/pants/scripts/pants_repo_probe.py` is read-only for tracked project
+files. It discovers the nearest `pants.toml`, selects `./pants` when an
+executable wrapper exists, parses core configuration, and runs only lightweight
+Pants commands unless `--files-only` is used. The default Pants invocations may
+still create local cache or daemon state such as `.pants.d/`.
 
 ## Development Notes
 
@@ -75,3 +76,10 @@ When improving the skill from a real local repository, extract workflow rules,
 not private code or project-specific policy. Put longer Pants detail in
 `skills/pants/references/*.md`; keep `skills/pants/SKILL.md` focused on the
 agent's first moves, decision points, and validation habits.
+
+Use `docs/agent-field-notes.md` as the repo-local promotion queue for reusable
+lessons before moving them into the installable skill bundle.
+
+When validating an installed copy under a hidden directory such as
+`.agents/skills/pants`, run targeted checks against the installed helper scripts
+if the target repository's normal scanners skip dot-directories.
