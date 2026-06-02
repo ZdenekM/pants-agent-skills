@@ -22,6 +22,7 @@ current-maintenance work.
 - Pants protoc subsystem: https://www.pantsbuild.org/stable/reference/subsystems/protoc
 - Pants buf subsystem: https://www.pantsbuild.org/stable/reference/subsystems/buf
 - Pants run goal: https://www.pantsbuild.org/stable/docs/python/goals/run
+- Pants REPL goal: https://www.pantsbuild.org/stable/docs/python/goals/repl
 - Pants Python overview: https://www.pantsbuild.org/stable/docs/python/overview
 - Pants Python subsystem options: https://www.pantsbuild.org/stable/reference/subsystems/python
 - Pants third-party dependencies: https://www.pantsbuild.org/stable/docs/python/overview/third-party-dependencies

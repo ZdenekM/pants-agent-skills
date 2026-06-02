@@ -36,7 +36,8 @@ When import names do not match distribution names, look for existing
 `module_mapping` or `modules` patterns and extend those directly.
 
 Run dependency import smoke checks inside a Pants-owned environment before
-treating an import miss as dependency evidence. Prefer a narrow Python target:
+treating an import miss as dependency evidence. Prefer the narrow consuming
+Python target whose dependency closure should contain the package:
 
 ```bash
 pants repl path/to:target <<'PY'
@@ -45,9 +46,11 @@ PY
 ```
 
 Use another repo-approved Pants target when the repo already has one for import
-checks. Do not repair an ambient `python -c "import ..."` failure by installing
-packages locally unless the repo contract says that ambient interpreter is the
-environment under test.
+checks. If the import fails inside Pants, inspect target ownership, dependency
+inference, explicit dependencies, and resolve membership before concluding that
+the distribution is absent from the lockfile. Do not repair an ambient
+`python -c "import ..."` failure by installing packages locally unless the repo
+contract says that ambient interpreter is the environment under test.
 
 ## Resolves And Lockfiles
 
@@ -66,11 +69,13 @@ lockfiles. Some keep lockfiles at the build root; others keep them under
 
 Inspect `[python].resolves_to_lock_style` when lockfile generation fails on
 platform-only artifacts or when a repo's supported platform contract is narrow.
-For a single-platform resolve, prefer `strict` when a universal lockfile pulls
-irrelevant platform artifacts or cannot fingerprint them on the active host. Do
-not hide that build-contract issue by pinning unrelated transitive packages.
-Keep `universal` or configured complete platforms when the repo intentionally
-supports several platforms or interpreters.
+For a single-platform resolve, prefer `strict` when lockfile generation runs on
+the representative supported platform or CI host and a universal lockfile pulls
+irrelevant platform artifacts or cannot fingerprint them there. Do not hide that
+build-contract issue by pinning unrelated transitive packages. Keep `universal`
+or configured complete platforms when the repo intentionally supports several
+platforms or interpreters, or when the active host is not representative of the
+target platform.
 
 Regenerate the narrowest affected resolve:
 
