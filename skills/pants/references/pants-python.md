@@ -35,6 +35,20 @@ inputs that Pants uses:
 When import names do not match distribution names, look for existing
 `module_mapping` or `modules` patterns and extend those directly.
 
+Run dependency import smoke checks inside a Pants-owned environment before
+treating an import miss as dependency evidence. Prefer a narrow Python target:
+
+```bash
+pants repl path/to:target <<'PY'
+import package_name
+PY
+```
+
+Use another repo-approved Pants target when the repo already has one for import
+checks. Do not repair an ambient `python -c "import ..."` failure by installing
+packages locally unless the repo contract says that ambient interpreter is the
+environment under test.
+
 ## Resolves And Lockfiles
 
 Before changing dependencies, inspect:
@@ -50,6 +64,14 @@ Check `[python] enable_resolves`, `default_resolve`, and `resolves` in
 lockfiles. Some keep lockfiles at the build root; others keep them under
 `3rdparty/`.
 
+Inspect `[python].resolves_to_lock_style` when lockfile generation fails on
+platform-only artifacts or when a repo's supported platform contract is narrow.
+For a single-platform resolve, prefer `strict` when a universal lockfile pulls
+irrelevant platform artifacts or cannot fingerprint them on the active host. Do
+not hide that build-contract issue by pinning unrelated transitive packages.
+Keep `universal` or configured complete platforms when the repo intentionally
+supports several platforms or interpreters.
+
 Regenerate the narrowest affected resolve:
 
 ```bash
@@ -60,9 +82,10 @@ Regenerate all lockfiles only when the repo contract requires it or the change
 really crosses resolve boundaries.
 
 After lockfile generation, inspect `git diff --numstat` and named
-package/version changes. If unrelated transitive versions drift, explicitly
-accept that broader refresh or narrow the lockfile change using the repo's
-approved workflow.
+package/version changes. Also inspect lockfile metadata such as `lock_style`,
+`platform_tag`, Pex version, and resolver details when present. If unrelated
+transitive versions drift, explicitly accept that broader refresh or narrow the
+lockfile change using the repo's approved workflow.
 
 ## Tool Lockfiles
 

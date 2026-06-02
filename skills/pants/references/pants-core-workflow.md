@@ -56,6 +56,10 @@ repo-local wrapper), `pants.toml`, and upstream Pants sources listed in
 pantsbuild.pants` as authoritative for a Pants 2 runner selection. After changing
 `[GLOBAL] pants_version` in a repo without an executable wrapper, run
 `pants --version` to prove the PATH runner can bootstrap the configured version.
+If bootstrap fails before Pants starts, diagnose the runner itself rather than
+the repo code. A shared `scie-pants` launcher may need a package-manager update
+or `SCIE_BOOT=update pants`; record that launcher/toolchain change and rerun
+`pants --version`.
 
 ## BUILD Files And Targets
 

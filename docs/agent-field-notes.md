@@ -25,6 +25,67 @@ single repo, keep it in that repo's `AGENTS.md`, plans, or local memory instead.
 
 ## Entries
 
+### 2026-06-02 - Run Dependency Import Checks Inside The Pants Resolve
+
+- Context: Python API repository with Pants 2.32, one strict user resolve, no
+  checked-in virtualenv, and direct Git/VCS runtime dependency pins.
+- Observed:
+  - A planned `python -c "import ..."` dependency smoke check failed under the
+    ambient system Python because the Pants-managed resolve was not on
+    `sys.path`.
+  - The same import check passed when run through `pants repl <target>` with
+    code fed on stdin, which built the target requirements PEX and activated
+    the locked distributions without starting the service or touching hardware.
+- Risk:
+  - Agents may misclassify an ambient interpreter miss as a dependency upgrade
+    regression, or may install packages into a local environment to make the
+    check pass outside the repository's build contract.
+- Candidate skill change:
+  - For Pants-managed Python repos, run dependency import smoke checks inside a
+    Pants-owned environment, for example `pants repl <python target>` with
+    stdin, or another repo-approved Pants target, before treating an ambient
+    `python -c` failure as evidence.
+  - When a plan uses ambient Python for import checks, explicitly state whether
+    that interpreter is expected to have the repo resolve installed.
+- Status: promoted to `skills/pants/references/pants-python.md`.
+
+### 2026-06-02 - Pants 2.32 Launcher And Strict Lockfile Upgrade Pattern
+
+- Context: Small Python-only API repository upgraded from Pants 2.28.0 to
+  2.32.0 using a repo-mandated `pants` executable from PATH, a single
+  `python-default` resolve, CPython 3.12, and a Linux x86_64 development host.
+- Observed:
+  - The existing PATH launcher attempted to download a non-existent
+    `pants.2.32.0-cp311-linux_x86_64.pex` artifact and failed before Pants
+    could bootstrap.
+  - Running `SCIE_BOOT=update pants` upgraded the launcher to `scie-pants
+    0.13.2`; after that, `pants --version` successfully bootstrapped and
+    reported Pants 2.32.0.
+  - Regenerating the previous universal lockfile under Pants 2.32 failed while
+    fingerprinting a macOS-only `pyobjc-framework-scriptingbridge` 12.2 sdist
+    on Linux because the build script expected `/usr/bin/sw_vers`.
+  - Setting `[python].resolves_to_lock_style = { "python-default" = "strict" }`
+    produced a Linux/CPython 3.12 lockfile with locally vettable artifacts,
+    removed macOS-only `pyobjc*` artifacts, and let `pants lint ::`, `pants
+    check ::`, `pants test ::`, and `pants package //:server_dist` pass.
+- Risk:
+  - Agents may treat a Pants version bump as only a `pants.toml` edit and miss
+    that newer Pants releases can require a newer `scie-pants` launcher.
+  - Universal lockfiles can fail or include broad unvetted artifacts when a
+    project only needs the current platform; resolving the error by pinning an
+    unrelated transitive package hides the build-contract issue.
+- Candidate skill change:
+  - Add Pants-upgrade guidance: when a configured Pants version fails before
+    bootstrap with a missing release artifact, inspect whether `scie-pants`
+    needs `SCIE_BOOT=update pants`, and record the global launcher change.
+  - In Python lockfile guidance, mention `resolves_to_lock_style` and prefer
+    `strict` for single-platform repos when universal lockfiles pull irrelevant
+    platform-only artifacts or fail while fingerprinting them.
+  - After lockfile regeneration, inspect metadata fields such as `lock_style`,
+    `platform_tag`, Pex version, and package drift, not only command success.
+- Status: promoted to `skills/pants/references/pants-core-workflow.md` and
+  `skills/pants/references/pants-python.md`.
+
 ### 2026-05-26 - First Test Slice Must Prove Target Ownership
 
 - Context: Small Python-only Pants 2.28 repository that initially had no
