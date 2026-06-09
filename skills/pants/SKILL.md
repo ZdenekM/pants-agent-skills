@@ -48,7 +48,7 @@ Do not treat an ambient virtualenv, ad hoc Docker invocation, checked-in generat
 
 ## Debugging
 
-For difficult failures, add `--print-stacktrace -ldebug` and use `--keep-sandboxes=on_failure`. Inspect the sandbox contents and `__run.sh`. For daemon/cache suspicion, try `--no-pantsd` before deleting caches. Explain the effect before removing `.pants.d`, named caches, local stores, or global Pants caches.
+For difficult failures, add `--print-stacktrace -ldebug` and use `--keep-sandboxes=on_failure`. Inspect the sandbox contents and `__run.sh`. For daemon/cache suspicion, try `--no-pantsd` and `--no-local-cache` before deleting caches. Measure cache size before cleanup, prefer the bundled cache maintenance helper for size-based cleanup, and do not remove global Pants caches unless explicitly requested.
 
 ## Parallel Workspaces
 
@@ -59,6 +59,6 @@ Treat every editor window, terminal, agent session, or workspace as a separate P
 - Read `references/pants-core-workflow.md` for build root discovery, target selection, introspection, and verification flow.
 - Read `references/pants-python.md` for Python requirement targets, resolves, lockfiles, tool lockfiles, and pytest behavior.
 - Read `references/pants-docker-shell.md` for Docker images, shell scripts, shell commands, linting, and package verification.
-- Read `references/pants-troubleshooting.md` for import errors, sandbox failures, cache/pantsd diagnosis, and parallelism issues.
+- Read `references/pants-troubleshooting.md` for import errors, sandbox failures, cache/pantsd diagnosis, cache cleanup, and parallelism issues.
 - Read `references/parallel-pants-workspaces.md` when multiple Pants repos, workspaces, windows, or agent sessions are active.
 - Read `references/sources.md` when you need current upstream documentation links.

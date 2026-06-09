@@ -16,6 +16,8 @@ current-maintenance work.
 - Pants advanced target selection: https://www.pantsbuild.org/stable/docs/using-pants/advanced-target-selection
 - Pants project introspection: https://www.pantsbuild.org/stable/docs/using-pants/project-introspection
 - Pants troubleshooting: https://www.pantsbuild.org/stable/docs/using-pants/troubleshooting-common-issues
+- Pants in CI: https://www.pantsbuild.org/stable/docs/using-pants/using-pants-in-ci
+- Pants remote caching and execution: https://www.pantsbuild.org/stable/docs/using-pants/remote-caching-execution
 - Pants installation and launcher: https://www.pantsbuild.org/stable/docs/getting-started/installing-pants
 - Pants codegen task pattern: https://www.pantsbuild.org/stable/docs/writing-plugins/common-plugin-tasks/add-codegen
 - Pants Protobuf target: https://www.pantsbuild.org/stable/reference/targets/protobuf_source

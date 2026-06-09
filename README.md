@@ -60,6 +60,7 @@ Run the local validation suite before relying on the skill:
 python scripts/validate_skill.py
 python -m unittest discover -s tests
 python skills/pants/scripts/pants_repo_probe.py --help
+python skills/pants/scripts/pants_cache_maintenance.py --help
 python scripts/install_skill.py --dry-run
 python scripts/install_skill.py --runtime codex --dry-run
 ```
@@ -69,6 +70,10 @@ files. It discovers the nearest `pants.toml`, selects `./pants` when an
 executable wrapper exists, parses core configuration, and runs only lightweight
 Pants commands unless `--files-only` is used. The default Pants invocations may
 still create local cache or daemon state such as `.pants.d/`.
+
+`skills/pants/scripts/pants_cache_maintenance.py` reports Pants cache directory
+sizes by default. It only deletes cache directories when `--apply` and explicit
+per-cache `--limit NAME=MB` controls are provided.
 
 ## Development Notes
 

@@ -142,6 +142,16 @@ def validate_probe_script() -> None:
     py_compile.compile(str(probe), doraise=True)
 
 
+def validate_cache_maintenance_script() -> None:
+    script = SKILL_DIR / "scripts" / "pants_cache_maintenance.py"
+    if not script.is_file():
+        fail("Missing pants_cache_maintenance.py")
+    text = script.read_text(encoding="utf-8")
+    if "--apply" not in text or "--limit" not in text:
+        fail("Cache maintenance script must require explicit apply and limit controls.")
+    py_compile.compile(str(script), doraise=True)
+
+
 def validate_repo_scripts() -> None:
     for script in (REPO_ROOT / "scripts" / "install_skill.py", REPO_ROOT / "scripts" / "validate_skill.py"):
         if not script.is_file():
@@ -176,6 +186,7 @@ def main() -> int:
         validate_references,
         validate_no_private_paths,
         validate_probe_script,
+        validate_cache_maintenance_script,
         validate_repo_scripts,
     ]
     for check in checks:

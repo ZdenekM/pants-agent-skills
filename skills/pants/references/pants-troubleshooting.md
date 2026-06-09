@@ -53,10 +53,49 @@ After a sandbox failure:
 
 ## pantsd And Cache
 
-Try `--no-pantsd` when daemon state is suspicious. Delete `.pants.d`, named
-caches, local stores, or global caches only after targeted diagnosis and with a
-clear explanation of cost. In multi-repo work, global cleanup can disturb other
-active Pants projects.
+Treat invalidation debugging and size-based cleanup as separate workflows.
+
+For suspected invalidation issues:
+
+```bash
+pants --no-pantsd <goal> <spec>
+pants --no-local-cache <goal> <spec>
+```
+
+If `--no-pantsd` resolves the issue, restart the daemon by removing
+`.pants.d/pids/` from the build root. Preserve `.pants.d/workdir/pantsd/` logs
+and persistent cache contents when they may be useful for an upstream bug
+report. Delete global cache directories only after targeted diagnosis and with
+a clear explanation of cost.
+
+For size-based cleanup, measure first:
+
+```bash
+python <skill-dir>/scripts/pants_cache_maintenance.py --pretty
+python <skill-dir>/scripts/pants_cache_maintenance.py --limit launcher=512 --limit named_caches=1024 --apply
+```
+
+The helper is read-only unless `--apply` is provided, and it only deletes cache
+categories with explicit `--limit NAME=MB` values that are exceeded.
+
+## Cache Directory Map
+
+- Launcher cache: `$HOME/.cache/nce` on Linux or
+  `$HOME/Library/Caches/nce` on macOS. Cache it against the Pants version.
+- `named_caches_dir`: defaults to `$HOME/.cache/pants/named_caches`; tools such
+  as PEX store reusable tool data here. Cache it against tool inputs such as
+  Python lockfiles.
+- `local_store_dir`: defaults to `$HOME/.cache/pants/lmdb_store`; this stores
+  local process results. In CI, preserve it only when the invalidation key is
+  broad enough, or prefer remote caching for fine-grained reuse.
+- `pants_workdir`: defaults to `.pants.d/workdir` under the build root. It holds
+  logs and temporary workdir state and is not the persistent cache.
+- `pants_distdir`: defaults to `dist/`. It holds package artifacts and is not a
+  cache.
+
+For `named_caches_dir` and `local_store_dir`, absolute paths are used directly;
+relative paths are relative to the build root. In multi-repo work, global cache
+cleanup can disturb other active Pants projects.
 
 ## Parallelism And Shared Resources
 
