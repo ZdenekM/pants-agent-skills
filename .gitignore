@@ -219,3 +219,4 @@ __marimo__/
 
 # Local agent/tool state
 .serena/
+.omen/
