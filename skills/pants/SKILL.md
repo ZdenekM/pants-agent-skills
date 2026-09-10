@@ -48,7 +48,7 @@ Do not treat an ambient virtualenv, ad hoc Docker invocation, checked-in generat
 
 ## Debugging
 
-For difficult failures, add `--print-stacktrace -ldebug` and use `--keep-sandboxes=on_failure`. Inspect the sandbox contents and `__run.sh`. For daemon/cache suspicion, try `--no-pantsd` and `--no-local-cache` before deleting caches. Measure cache size before cleanup, prefer the bundled cache maintenance helper for size-based cleanup, and do not remove global Pants caches unless explicitly requested.
+For difficult failures, add `--print-stacktrace -ldebug` and use `--keep-sandboxes=on_failure`. Inspect the sandbox contents and `__run.sh`. For daemon/cache suspicion, try `--no-pantsd` and `--no-local-cache` before deleting caches. Measure cache size before cleanup and prefer the bundled cache maintenance helper. Resolve cache locations from the effective config, not from `pants.toml` alone: `pantsrc_files` and `PANTS_*` environment variables override it, and `pants --no-pantsd help-advanced global` prints the live path and its source. A redirected cache leaves the old directory on disk at full size; treat it as a stale candidate, not as the live cache. Do not remove global Pants caches unless explicitly requested.
 
 ## Parallel Workspaces
 

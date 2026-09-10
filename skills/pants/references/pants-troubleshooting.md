@@ -77,6 +77,78 @@ python <skill-dir>/scripts/pants_cache_maintenance.py --limit launcher=512 --lim
 
 The helper is read-only unless `--apply` is provided, and it only deletes cache
 categories with explicit `--limit NAME=MB` values that are exceeded.
+`shadowed_caches` and `pex_roots` are reported for information; neither is a
+deletion target in its own right. One caveat: a pex root nested inside a cache
+category -- `<named_caches_dir>/pex_root`, or a `PEX_ROOT` pointed inside it --
+is removed along with its parent when that category's limit is exceeded. Such an
+entry is reported with `inside_named_caches: true` and a note saying so.
+
+## Resolve Cache Paths From Effective Config
+
+`pants.toml` is not authoritative on its own. Pants reads `pantsrc_files`
+(`/etc/pantsrc`, `~/.pants.rc`, `.pants.rc` by default) after it, then `PANTS_*`
+environment variables. Confirm the live location before measuring or deleting:
+
+```bash
+pants --no-pantsd help-advanced global
+```
+
+Each overridden option prints `current value: <path> (<source>)`.
+
+When a cache option is redirected this way, Pants stops using the directory
+named in `pants.toml` but never removes it. The old location stays on disk at
+full size and reads as if it were the live cache. A repo-relative default such
+as `.pants.d/lmdb_store` also leaves one copy per git worktree. The helper
+lists these under `shadowed_caches` with size and newest mtime; verify against
+`help-advanced global` before deleting one.
+
+When clearing a shadowed repo-local cache, delete only the redirected cache
+subdirectories. `pants_workdir` (`.pants.d/workdir`) and `.pants.d/pids` stay
+per-build-root whatever the cache options say, and they are live state.
+
+## Cache Size Limits Do Not Cover Everything
+
+`local_store_*_max_size_bytes` bound `local_store_dir`, and Pants garbage-
+collects it to one tenth of their sum. Nothing bounds `named_caches_dir`. Its
+`pex_root` subtree grows without limit as resolves change, which makes it the
+usual source of unexplained growth once the local store is capped.
+
+## Pruning PEX Caches
+
+Do not prune a pex root with `find -mtime`. Wheels are installed once and
+hardlinked into every venv that uses them, so an old mtime does not mean an
+entry is unreferenced, and archive extraction can leave files dated decades in
+the future. Use the reference-aware pruner, which keeps its own last-access
+markers:
+
+```bash
+pex3 cache prune --older-than "60 days" -n --pex-root <root>
+pex3 cache prune --older-than "60 days" --pex-root <root>
+```
+
+Drop `-n` only after reviewing the dry run. Prune each root separately: the
+Pants-managed one at `<named_caches_dir>/pex_root`, and any user-level
+`PEX_ROOT` (current pex defaults to the platform cache directory; older
+versions used `~/.pex`). Never prune while a Pants command is running, and note
+that pex takes a cache write lock that blocks until every other pex process
+exits -- a long-running `pants run ...:server` will stall the prune, so stop it
+or skip that root.
+
+The totals `pex3 cache prune` reports are apparent sizes, not reclaimed disk.
+Most of a pex root is `installed_wheels`, and a venv's content is hardlinked to
+it, so pruning venvs frees far less than the printed figure. Measure the root
+with `du -sh` before and after to learn the real number; a run reporting 16.6 GB
+pruned can return roughly 2 GB.
+
+Two failure modes worth planning for:
+
+- Entries written by an older pex version can lack the `.last-access` marker,
+  and the prune aborts on the first one with `No such file or directory:
+  .../.last-access`. Widen the cutoff, or recreate the missing markers with
+  `touch -r <entry-dir> <entry-dir>/.last-access` so the recorded access time
+  matches the directory rather than now. Never fall back to manual deletion.
+- Automate the prune non-fatally. One bad entry must not take down a scheduled
+  sweep.
 
 ## Cache Directory Map
 
@@ -96,6 +168,11 @@ categories with explicit `--limit NAME=MB` values that are exceeded.
 For `named_caches_dir` and `local_store_dir`, absolute paths are used directly;
 relative paths are relative to the build root. In multi-repo work, global cache
 cleanup can disturb other active Pants projects.
+
+When measuring a pex root, count each inode once. Summing file sizes without
+deduplicating hardlinks overstates it several-fold and makes size-based limits
+fire on bytes that are not there. `du` and the bundled helper both deduplicate;
+a plain file-size walk does not.
 
 ## Parallelism And Shared Resources
 

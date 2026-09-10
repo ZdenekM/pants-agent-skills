@@ -79,14 +79,22 @@ prepared to review the diff.
 ## Shell Commands
 
 Pants can model command helpers through targets such as `shell_command` or
-`run_shell_command` depending on the repo/version/plugin surface. These run in a
-Pants sandbox and should declare the needed tools, inputs, outputs, and
-dependencies.
+`run_shell_command`, depending on the repo/version/plugin surface. The two are
+not interchangeable:
+
+- `shell_command` runs in a Pants sandbox. Declare `tools`, inputs,
+  `output_files`/`output_directories`, and dependencies; undeclared files are
+  not present and outputs not captured are discarded.
+- `run_shell_command` runs in the workspace, uses the system `PATH`, and does
+  not support `output_files` -- its writes land directly in the checkout. Treat
+  it as a convenience runner, not as a hermetic build step, and do not assume a
+  sandbox will contain its side effects.
 
 Before changing a shell command target:
 
-1. inspect `pants peek <target>`,
-2. check `tools`, `dependencies`, `output_files`, and `output_directories`,
+1. inspect `pants peek <target>` and confirm which of the two it is,
+2. for `shell_command`, check `tools`, `dependencies`, `output_files`, and
+   `output_directories`,
 3. make the command idempotent because Pants may rerun it,
 4. avoid relying on undeclared files from the developer machine,
 5. verify the exact target with `pants run <target>` or the repo's documented
